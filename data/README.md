@@ -33,8 +33,11 @@ data/
 
 1. Download the dataset manually from the Kaggle link above.
 2. Place the unzipped content into `data/raw/`.
-3. Run the preprocessing pipeline: `python preprocessing/palm_vein_preprocess.py`
+3. Run the preprocessing pipeline:
 
+```bash
+python preprocessing/palm_vein_preprocess.py
+```
 This will save preprocessed images to `data/processed/`.
 
 ---
