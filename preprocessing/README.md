@@ -1,4 +1,4 @@
-# 🧼 Preprocessing Scripts
+# Preprocessing Scripts
 
 This folder contains preprocessing scripts and image visualization tools for the Palm Vein Authentication project.
 
