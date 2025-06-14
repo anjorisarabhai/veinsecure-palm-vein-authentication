@@ -39,5 +39,5 @@ This project aims to build a deep learning-based palm vein biometric authenticat
 ## Contributors
 
 - Anjori Sarabhai  
-- Apoorva
+- Apoorva Kashyap
 
