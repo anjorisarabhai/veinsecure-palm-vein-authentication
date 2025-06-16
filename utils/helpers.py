@@ -38,11 +38,90 @@ def load_processed_images(data_dir, img_size=(128, 128)):
     X = np.expand_dims(np.array(X), -1)
     y = np.array(y)
     return X, y, class_names
+
 """
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import to_categorical
+
+def create_data_generators(X, y_encoded, batch_size=32, augment=True):
+    """
+    Returns train, validation, and test generators using ImageDataGenerator.
+    Supports stratified splits and optional data augmentation.
+    """
+    y_cat = to_categorical(y_encoded)
+
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)
+
+    y_temp_enc = np.argmax(y_temp, axis=1)
+
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)
+
+    if augment:
+        train_aug = ImageDataGenerator(
+            rotation_range=10,
+            zoom_range=0.1,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            horizontal_flip=True
+        )
+    else:
+        train_aug = ImageDataGenerator()
+
+    test_aug = ImageDataGenerator()
+
+    train_gen = train_aug.flow(X_train, y_train, batch_size=batch_size, shuffle=True)
+    val_gen = test_aug.flow(X_val, y_val, batch_size=batch_size, shuffle=False)
+    test_gen = test_aug.flow(X_test, y_test, batch_size=batch_size, shuffle=False)
+
+    return train_gen, val_gen, test_gen
+
+    import tensorflow as tf
+
+def create_tf_data_pipeline(X, y_encoded, batch_size=32, buffer_size=512, augment=True):
+    """
+    Creates TensorFlow tf.data Dataset pipelines for train, val, and test sets.
+    Includes stratified splitting and optional data augmentation.
+    """
+
+    from sklearn.model_selection import train_test_split
+    from tensorflow.keras.utils import to_categorical
+
+    y_cat = to_categorical(y_encoded)
+
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)
+
+    y_temp_enc = tf.argmax(y_temp, axis=1).numpy()
+
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)
+
+    def augment_fn(image, label):
+        image = tf.image.random_flip_left_right(image)
+        image = tf.image.random_brightness(image, max_delta=0.1)
+        image = tf.image.random_contrast(image, 0.9, 1.1)
+        return image, label
+
+    def prepare_ds(X, y, training=False):
+        ds = tf.data.Dataset.from_tensor_slices((X, y))
+        if training and augment:
+            ds = ds.map(augment_fn, num_parallel_calls=tf.data.AUTOTUNE)
+        ds = ds.shuffle(buffer_size).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        return ds
+
+    train_ds = prepare_ds(X_train, y_train, training=True)
+    val_ds   = prepare_ds(X_val, y_val, training=False)
+    test_ds  = prepare_ds(X_test, y_test, training=False)
+
+    return train_ds, val_ds, test_ds
+
+
 
 # Write to helpers.py
 with open("utils/helpers.py", "w") as f:
     f.write(helper_code)
 
 print("✅ helpers.py created in utils/")
-
