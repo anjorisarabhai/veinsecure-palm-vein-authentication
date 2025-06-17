@@ -12,101 +12,82 @@ import os
 # Create the utils directory if it doesn't exist
 os.makedirs('utils', exist_ok=True)
 
-# Define full helper file content
-helper_code = """
-import os
-import cv2
-import numpy as np
-import tensorflow as tf
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.utils import to_categorical
-
-def load_processed_images(data_dir, img_size=(128, 128)):
-    X, y = [], []
-    class_names = sorted(os.listdir(data_dir))
-
-    for class_idx, class_name in enumerate(class_names):
-        class_path = os.path.join(data_dir, class_name)
-        if os.path.isdir(class_path):
-            for img_file in os.listdir(class_path):
-                if img_file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                    img_path = os.path.join(class_path, img_file)
-                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-                    if img is not None:
-                        img = cv2.resize(img, img_size)
-                        img = img.astype('float32') / 255.0
-                        X.append(img)
-                        y.append(class_idx)
-
-    X = np.expand_dims(np.array(X), -1)
-    y = np.array(y)
-    return X, y, class_names
-
-def create_data_generators(X, y_encoded, batch_size=32, augment=True):
-    y_cat = to_categorical(y_encoded)
-
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)
-
-    y_temp_enc = np.argmax(y_temp, axis=1)
-
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)
-
-    if augment:
-        train_aug = ImageDataGenerator(
-            rotation_range=10,
-            zoom_range=0.1,
-            width_shift_range=0.1,
-            height_shift_range=0.1,
-            horizontal_flip=True
-        )
-    else:
-        train_aug = ImageDataGenerator()
-
-    test_aug = ImageDataGenerator()
-
-    train_gen = train_aug.flow(X_train, y_train, batch_size=batch_size, shuffle=True)
-    val_gen = test_aug.flow(X_val, y_val, batch_size=batch_size, shuffle=False)
-    test_gen = test_aug.flow(X_test, y_test, batch_size=batch_size, shuffle=False)
-
-    return train_gen, val_gen, test_gen
-
-def create_tf_data_pipeline(X, y_encoded, batch_size=32, buffer_size=512, augment=True):
-    y_cat = to_categorical(y_encoded)
-
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)
-
-    y_temp_enc = tf.argmax(y_temp, axis=1).numpy()
-
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)
-
-    def augment_fn(image, label):
-        image = tf.image.random_flip_left_right(image)
-        image = tf.image.random_brightness(image, max_delta=0.1)
-        image = tf.image.random_contrast(image, 0.9, 1.1)
-        return image, label
-
-    def prepare_ds(X, y, training=False):
-        ds = tf.data.Dataset.from_tensor_slices((X, y))
-        if training and augment:
-            ds = ds.map(augment_fn, num_parallel_calls=tf.data.AUTOTUNE)
-        ds = ds.shuffle(buffer_size).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-        return ds
-
-    train_ds = prepare_ds(X_train, y_train, training=True)
-    val_ds   = prepare_ds(X_val, y_val, training=False)
-    test_ds  = prepare_ds(X_test, y_test, training=False)
-
-    return train_ds, val_ds, test_ds
-"""
-
-# Write helpers.py file
+# Write actual Python code into helpers.py
 with open("utils/helpers.py", "w") as f:
-    f.write(helper_code)
+    f.write(
+        "import os\n"
+        "import cv2\n"
+        "import numpy as np\n"
+        "import tensorflow as tf\n"
+        "from sklearn.model_selection import train_test_split\n"
+        "from tensorflow.keras.preprocessing.image import ImageDataGenerator\n"
+        "from tensorflow.keras.utils import to_categorical\n\n"
 
-print("✅ helpers.py created in utils/")
+        "def load_processed_images(data_dir, img_size=(128, 128)):\n"
+        "    X, y = [], []\n"
+        "    class_names = sorted(os.listdir(data_dir))\n"
+        "    for class_idx, class_name in enumerate(class_names):\n"
+        "        class_path = os.path.join(data_dir, class_name)\n"
+        "        if os.path.isdir(class_path):\n"
+        "            for img_file in os.listdir(class_path):\n"
+        "                if img_file.lower().endswith(('.jpg', '.jpeg', '.png')):\n"
+        "                    img_path = os.path.join(class_path, img_file)\n"
+        "                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)\n"
+        "                    if img is not None:\n"
+        "                        img = cv2.resize(img, img_size)\n"
+        "                        img = img.astype('float32') / 255.0\n"
+        "                        X.append(img)\n"
+        "                        y.append(class_idx)\n"
+        "    X = np.expand_dims(np.array(X), -1)\n"
+        "    y = np.array(y)\n"
+        "    return X, y, class_names\n\n"
+
+        "def create_data_generators(X, y_encoded, batch_size=32, augment=True):\n"
+        "    y_cat = to_categorical(y_encoded)\n"
+        "    X_train, X_temp, y_train, y_temp = train_test_split(\n"
+        "        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)\n"
+        "    y_temp_enc = np.argmax(y_temp, axis=1)\n"
+        "    X_val, X_test, y_val, y_test = train_test_split(\n"
+        "        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)\n"
+        "    if augment:\n"
+        "        train_aug = ImageDataGenerator(\n"
+        "            rotation_range=10,\n"
+        "            zoom_range=0.1,\n"
+        "            width_shift_range=0.1,\n"
+        "            height_shift_range=0.1,\n"
+        "            horizontal_flip=True\n"
+        "        )\n"
+        "    else:\n"
+        "        train_aug = ImageDataGenerator()\n"
+        "    test_aug = ImageDataGenerator()\n"
+        "    train_gen = train_aug.flow(X_train, y_train, batch_size=batch_size, shuffle=True)\n"
+        "    val_gen = test_aug.flow(X_val, y_val, batch_size=batch_size, shuffle=False)\n"
+        "    test_gen = test_aug.flow(X_test, y_test, batch_size=batch_size, shuffle=False)\n"
+        "    return train_gen, val_gen, test_gen\n\n"
+
+        "def create_tf_data_pipeline(X, y_encoded, batch_size=32, buffer_size=512, augment=True):\n"
+        "    y_cat = to_categorical(y_encoded)\n"
+        "    X_train, X_temp, y_train, y_temp = train_test_split(\n"
+        "        X, y_cat, stratify=y_encoded, test_size=0.3, random_state=42)\n"
+        "    y_temp_enc = tf.argmax(y_temp, axis=1).numpy()\n"
+        "    X_val, X_test, y_val, y_test = train_test_split(\n"
+        "        X_temp, y_temp, stratify=y_temp_enc, test_size=0.5, random_state=42)\n"
+        "    def augment_fn(image, label):\n"
+        "        image = tf.image.random_flip_left_right(image)\n"
+        "        image = tf.image.random_brightness(image, max_delta=0.1)\n"
+        "        image = tf.image.random_contrast(image, 0.9, 1.1)\n"
+        "        return image, label\n"
+        "    def prepare_ds(X, y, training=False):\n"
+        "        ds = tf.data.Dataset.from_tensor_slices((X, y))\n"
+        "        if training and augment:\n"
+        "            ds = ds.map(augment_fn, num_parallel_calls=tf.data.AUTOTUNE)\n"
+        "        ds = ds.shuffle(buffer_size).batch(batch_size).prefetch(tf.data.AUTOTUNE)\n"
+        "        return ds\n"
+        "    train_ds = prepare_ds(X_train, y_train, training=True)\n"
+        "    val_ds   = prepare_ds(X_val, y_val, training=False)\n"
+        "    test_ds  = prepare_ds(X_test, y_test, training=False)\n"
+        "    return train_ds, val_ds, test_ds\n"
+    )
+
+print("✅ helpers.py updated and ready to import!")
 
