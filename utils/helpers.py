@@ -13,7 +13,7 @@ import os
 os.makedirs('utils', exist_ok=True)
 
 # Define helper functions (you can add more later)
-helper_code = """
+helper_code = '''
 import os
 import cv2
 import numpy as np
@@ -38,10 +38,9 @@ def load_processed_images(data_dir, img_size=(128, 128)):
     X = np.expand_dims(np.array(X), -1)
     y = np.array(y)
     return X, y, class_names
-"""
+'''
 
-# Write to helpers.py
-with open("utils/helpers.py", "w") as f:
+with open("/content/veinsecure-palm-vein-authentication/utils/helpers.py", "w") as f:
     f.write(helper_code)
 
 print("✅ helpers.py created in utils/")
