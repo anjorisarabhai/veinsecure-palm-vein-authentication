@@ -14,6 +14,7 @@ os.makedirs('utils', exist_ok=True)
 
 # Define helper functions (you can add more later)
 
+helper_code = 
 import os
 import cv2
 import numpy as np
