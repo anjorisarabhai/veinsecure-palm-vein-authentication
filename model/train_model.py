@@ -17,6 +17,7 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropou
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras import layers, models
 
+!rm -rf veinsecure-palm-vein-authentication
 !git clone https://github.com/anjorisarabhai/veinsecure-palm-vein-authentication.git
 
 """Note: if not able to import from utils.helper try removing the clone directory using:
@@ -31,12 +32,27 @@ sys.path.append('/content/veinsecure-palm-vein-authentication')
 
 !touch /content/veinsecure-palm-vein-authentication/utils/__init__.py
 
+!wget -O /content/veinsecure-palm-vein-authentication/utils/helpers.py https://raw.githubusercontent.com/anjorisarabhai/veinsecure-palm-vein-authentication/main/utils/helpers.py
+
 !ls -R /content/veinsecure-palm-vein-authentication
 
 import os
 print(os.listdir('/content/veinsecure-palm-vein-authentication/utils'))
 
-from utils.helpers import load_processed_images
+!ls /content/veinsecure-palm-vein-authentication/utils
+!sed -n '1,20p' /content/veinsecure-palm-vein-authentication/utils/helpers.py
+
+!head -n 127 /content/veinsecure-palm-vein-authentication/utils/helpers.py
+
+import importlib
+import utils.helpers
+importlib.reload(utils.helpers)
+
+from utils.helpers import (
+    load_processed_images,
+    create_data_generators,
+    create_tf_data_pipeline
+)
 
 """### **Modular Model Builder + Final CNN Architecture**"""
 
@@ -91,4 +107,3 @@ config = {
     "batch_size": 32,
     "learning_rate": 0.001
 }
-
