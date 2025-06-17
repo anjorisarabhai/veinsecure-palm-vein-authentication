@@ -107,3 +107,227 @@ config = {
     "batch_size": 32,
     "learning_rate": 0.001
 }
+
+with open('/content/veinsecure-palm-vein-authentication/utils/helpers.py', 'r') as f:
+    helpers_content = f.read()
+
+print(helpers_content)
+
+"""### **Add ImageDataGenerator**
+
+
+
+
+"""
+
+import importlib
+import utils.helpers
+importlib.reload(utils.helpers)
+
+from utils.helpers import load_processed_images
+
+from utils.helpers import load_processed_images
+
+"""### **Visualize one batch from new data pipeline**"""
+
+from google.colab import files
+uploaded = files.upload()
+
+import zipfile
+import os
+
+zip_path = "processed_dataset.zip"
+extract_path = "processed_dataset"
+
+with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    zip_ref.extractall(extract_path)
+
+print("Extracted to:", extract_path)
+
+!wget https://github.com/anjorisarabhai/veinsecure-palm-vein-authentication/raw/main/processed_dataset.zip
+!unzip processed_dataset.zip
+
+import matplotlib.pyplot as plt
+import numpy as np
+from utils.helpers import load_processed_images, create_tf_data_pipeline
+from sklearn.preprocessing import LabelEncoder
+
+# Step 1: Load and encode
+X, y, class_names = load_processed_images("processed_dataset")
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)
+
+# Step 2: Create tf.data pipeline
+train_ds, val_ds, test_ds = create_tf_data_pipeline(X, y_encoded, batch_size=16, augment=True)
+
+# Step 3: Get one batch from the train dataset
+for batch_X, batch_y in train_ds.take(1):
+    batch_X = batch_X.numpy()
+    batch_y = batch_y.numpy()
+
+# Step 4: Visualize 9 images with class labels
+plt.figure(figsize=(8, 8))
+for i in range(9):
+    img = batch_X[i].squeeze()
+    label_index = np.argmax(batch_y[i])
+    label_name = class_names[label_index]
+
+    plt.subplot(3, 3, i + 1)
+    plt.imshow(img, cmap='gray')
+    plt.title(f"User ID: {label_name}")
+    plt.axis('off')
+
+plt.tight_layout()
+plt.show()
+
+# Step 5: Print labels
+print("* Batch labels:")
+for i in range(9):
+    label_index = np.argmax(batch_y[i])
+    print(f"Image {i+1}: User ID = {class_names[label_index]}")
+
+"""## **Training Final Model**
+
+"""
+
+import os
+import numpy as np
+from tensorflow.keras import layers, models
+from tensorflow.keras.callbacks import CSVLogger
+from sklearn.preprocessing import LabelEncoder
+from utils.helpers import load_processed_images, create_data_generators
+from tensorflow.keras.utils import to_categorical
+
+"""### **Data Loading and Creation of Data Generators**"""
+
+# Step 1: Load data
+X, y, class_names = load_processed_images("processed_dataset")
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)
+y_cat = to_categorical(y_encoded)
+num_classes = y_cat.shape[1]
+
+# Step 2: Create data generators
+train_gen, val_gen, test_gen = create_data_generators(X, y_encoded, batch_size=32, augment=True)
+
+"""### **Create results folders**"""
+
+os.makedirs("results/plots", exist_ok=True)
+os.makedirs("results/models", exist_ok=True)
+os.makedirs("results/logs", exist_ok=True)
+
+"""### **Define and Compile Model**"""
+
+model = models.Sequential([
+    layers.Input(shape=(128, 128, 1)),
+    layers.Conv2D(32, (3, 3), activation='relu'),
+    layers.MaxPooling2D(2, 2),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D(2, 2),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(num_classes, activation='softmax')
+])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+"""### **Setup logging**"""
+
+csv_logger = CSVLogger("results/logs/training_log.csv")
+
+"""### **Track training time and memory usage (basic profiling)**"""
+
+import time
+import tracemalloc
+
+def profile_training(train_func):
+    """Wrap your training code inside this function for time & memory profiling."""
+    start_time = time.time()
+    tracemalloc.start()
+
+    history = train_func()  # your model.fit() or any training function
+
+    end_time = time.time()
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    print(f"🕒 Training time: {(end_time - start_time):.2f} seconds")
+    print(f"📈 Peak memory usage: {peak / 1024 / 1024:.2f} MB")
+
+    return history
+
+"""### **Train model**"""
+
+history = profile_training(lambda: model.fit(
+    train_gen,
+    validation_data=val_gen,
+    epochs=15,
+    callbacks=[csv_logger]
+))
+
+"""### **Plot and Save Learning Curves (results/plots)**"""
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Load the training log
+log_df = pd.read_csv("results/logs/training_log.csv")
+
+# Plot accuracy
+plt.figure(figsize=(10, 4))
+plt.subplot(1, 2, 1)
+plt.plot(log_df["accuracy"], label="Train Accuracy")
+plt.plot(log_df["val_accuracy"], label="Val Accuracy")
+plt.title("Accuracy over Epochs")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(log_df["loss"], label="Train Loss")
+plt.plot(log_df["val_loss"], label="Val Loss")
+plt.title("Loss over Epochs")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+
+# Save plots
+plt.tight_layout()
+plt.savefig("results/plots/learning_curves.png")
+plt.show()
+
+"""### **Save Final Model (.h5 Format)**"""
+
+model.save("results/models/final_model.h5")
+print("✅ Final model saved to results/models/final_model.h5")
+
+"""### **Log accuracy & loss per epoch**"""
+
+# Read and display the training log
+import pandas as pd
+
+log_df = pd.read_csv("results/logs/training_log.csv")
+print("Training Log:")
+print(log_df)
+
+"""### **Add early stopping & model checkpoint saving**
+
+"""
+
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+# Paths
+checkpoint_path = "results/models/best_model.h5"
+
+# Callbacks
+callbacks = [
+    EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True, verbose=1),
+    ModelCheckpoint(filepath=checkpoint_path, monitor='val_accuracy', save_best_only=True, verbose=1)
+]
+
+import shutil
+shutil.make_archive("results", 'zip', "results")
+
+from google.colab import files
+files.download("results.zip")
+
