@@ -12,11 +12,15 @@ import os
 # Create the utils directory if it doesn't exist
 os.makedirs('utils', exist_ok=True)
 
-# Define helper functions (you can add more later)
+# Define full helper file content
 helper_code = """
 import os
 import cv2
 import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import to_categorical
 
 def load_processed_images(data_dir, img_size=(128, 128)):
     X, y = [], []
@@ -39,16 +43,7 @@ def load_processed_images(data_dir, img_size=(128, 128)):
     y = np.array(y)
     return X, y, class_names
 
-"""
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.utils import to_categorical
-
 def create_data_generators(X, y_encoded, batch_size=32, augment=True):
-    """
-    Returns train, validation, and test generators using ImageDataGenerator.
-    Supports stratified splits and optional data augmentation.
-    """
     y_cat = to_categorical(y_encoded)
 
     X_train, X_temp, y_train, y_temp = train_test_split(
@@ -78,17 +73,7 @@ def create_data_generators(X, y_encoded, batch_size=32, augment=True):
 
     return train_gen, val_gen, test_gen
 
-    import tensorflow as tf
-
 def create_tf_data_pipeline(X, y_encoded, batch_size=32, buffer_size=512, augment=True):
-    """
-    Creates TensorFlow tf.data Dataset pipelines for train, val, and test sets.
-    Includes stratified splitting and optional data augmentation.
-    """
-
-    from sklearn.model_selection import train_test_split
-    from tensorflow.keras.utils import to_categorical
-
     y_cat = to_categorical(y_encoded)
 
     X_train, X_temp, y_train, y_temp = train_test_split(
@@ -117,11 +102,11 @@ def create_tf_data_pipeline(X, y_encoded, batch_size=32, buffer_size=512, augmen
     test_ds  = prepare_ds(X_test, y_test, training=False)
 
     return train_ds, val_ds, test_ds
+"""
 
-
-
-# Write to helpers.py
+# Write helpers.py file
 with open("utils/helpers.py", "w") as f:
     f.write(helper_code)
 
 print("✅ helpers.py created in utils/")
+
