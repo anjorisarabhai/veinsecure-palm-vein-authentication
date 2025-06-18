@@ -125,7 +125,7 @@ def visualize_batch(generator_or_dataset, class_names, framework='keras'):
     plt.tight_layout()
     plt.show()
 
-# Added for Day 10: Load test data from folder using ImageDataGenerator
+#  Added for Day 10: Load test data from folder using ImageDataGenerator
 def build_test_generator(batch_size=32, shuffle=False, target_size=(128, 128), color_mode="grayscale"):
     test_dir = "data/test"  # Make sure this folder exists with subfolders per class
     test_datagen = ImageDataGenerator(rescale=1./255)
