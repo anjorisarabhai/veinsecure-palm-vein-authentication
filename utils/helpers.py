@@ -124,11 +124,25 @@ def visualize_batch(generator_or_dataset, class_names, framework='keras'):
         plt.axis('off')
     plt.tight_layout()
     plt.show()
+
+# Added for Day 10: Load test data from folder using ImageDataGenerator
+def build_test_generator(batch_size=32, shuffle=False, target_size=(128, 128), color_mode="grayscale"):
+    test_dir = "data/test"  # Make sure this folder exists with subfolders per class
+    test_datagen = ImageDataGenerator(rescale=1./255)
+    test_gen = test_datagen.flow_from_directory(
+        test_dir,
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode="categorical",
+        shuffle=shuffle,
+        color_mode=color_mode
+    )
+    class_names = list(test_gen.class_indices.keys())
+    return test_gen, class_names
 '''
 
 # Write the file
 with open("/content/veinsecure-palm-vein-authentication/utils/helpers.py", "w") as f:
     f.write(helper_code)
 
-print("✅ helpers.py updated with loader, generators, pipelines, and batch visualization.")
-
+print("helpers.py updated with loader, generators, pipelines, and batch visualization.")
