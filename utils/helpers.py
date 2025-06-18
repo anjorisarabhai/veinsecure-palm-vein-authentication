@@ -124,11 +124,10 @@ def visualize_batch(generator_or_dataset, class_names, framework='keras'):
         plt.axis('off')
     plt.tight_layout()
     plt.show()
-
 '''
 
 # Write the file
 with open("/content/veinsecure-palm-vein-authentication/utils/helpers.py", "w") as f:
     f.write(helper_code)
 
-print("helpers.py updated with loader, generators, pipelines, and batch visualization.")
+print("✅ helpers.py updated with loader, generators, pipelines, and batch visualization.")
