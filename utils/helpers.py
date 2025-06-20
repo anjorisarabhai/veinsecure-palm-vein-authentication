@@ -125,7 +125,6 @@ def visualize_batch(generator_or_dataset, class_names, framework='keras'):
     plt.tight_layout()
     plt.show()
 
-# ✅ Added for Day 10: Load test data from folder using ImageDataGenerator
 def build_test_generator(batch_size=32, shuffle=False, target_size=(128, 128), color_mode="grayscale"):
     test_dir = "data/test"  # Make sure this folder exists with subfolders per class
     test_datagen = ImageDataGenerator(rescale=1./255)
@@ -139,6 +138,24 @@ def build_test_generator(batch_size=32, shuffle=False, target_size=(128, 128), c
     )
     class_names = list(test_gen.class_indices.keys())
     return test_gen, class_names
+
+def predict_image(file_path, model, class_names, img_size=(128, 128)):
+    """
+    Predict class of a single palm image.
+    """
+    import cv2
+    img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise ValueError("Could not read image. Check file path.")
+    
+    img = cv2.resize(img, img_size).astype('float32') / 255.0
+    img = np.expand_dims(img, axis=(0, -1))  # Shape: (1, 128, 128, 1)
+
+    pred_probs = model.predict(img)
+    pred_class_idx = np.argmax(pred_probs)
+    pred_class_name = class_names[pred_class_idx]
+
+    return pred_class_idx, pred_class_name, float(np.max(pred_probs))
 '''
 
 # Write the file
