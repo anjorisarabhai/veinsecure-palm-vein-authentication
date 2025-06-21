@@ -159,7 +159,7 @@ def predict_image(file_path, model, class_names, img_size=(128, 128)):
 '''
 
 # Write the file
-with open("/content/veinsecure-palm-vein-authentication/utils/helpers.py", "w") as f:
-    f.write(helper_code)
+# with open("/content/veinsecure-palm-vein-authentication/utils/helpers.py", "w") as f:
+    # f.write(helper_code)
 
 print("✅ helpers.py updated with loader, generators, pipelines, and batch visualization.")
