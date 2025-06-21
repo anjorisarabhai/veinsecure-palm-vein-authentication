@@ -143,3 +143,23 @@ def predict_image(file_path, model, class_names, img_size=(128, 128)):
     pred_class_name = class_names[pred_class_idx]
 
     return pred_class_idx, pred_class_name, float(np.max(pred_probs))
+
+
+# 🔹 FINAL ADDITIONS FOR FLASK API (LOCAL USE) 🔹
+
+# Load model once at module level
+model = tf.keras.models.load_model("final_model.h5")
+
+# Define static class name mapping (Person01 to Person50)
+class_names = [f"Person{i:02d}" for i in range(1, 51)]
+
+def predict_image_flask(file_path):
+    """
+    Wrapper for Flask API. Accepts a file path, uses preloaded model and class names,
+    and returns prediction in dictionary format.
+    """
+    pred_idx, pred_name, confidence = predict_image(file_path, model, class_names)
+    return {
+        "predicted_class": pred_name,
+        "confidence": round(confidence, 3)
+    }
