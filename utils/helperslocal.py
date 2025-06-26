@@ -148,7 +148,11 @@ def predict_image(file_path, model, class_names, img_size=(128, 128)):
 # 🔹 FINAL ADDITIONS FOR FLASK API (LOCAL USE) 🔹
 
 # Load model once at module level
-model = tf.keras.models.load_model("final_model.h5")
+#model = tf.keras.models.load_model("final_model.h5")
+import os
+model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'results', 'models', 'final_model.h5'))
+print("🔍 Looking for model at:", model_path)
+model = tf.keras.models.load_model(model_path)
 
 # Define static class name mapping (Person01 to Person50)
 class_names = [f"Person{i:02d}" for i in range(1, 51)]
