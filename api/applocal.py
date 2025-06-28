@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from tensorflow.keras.models import load_model
 import os
 import sys
@@ -8,24 +8,26 @@ import logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.helperslocal import predict_image  # Local-only version
 
-# 🔹 Load model (local path to .h5)
+# 🔹 Load model
 model = load_model(r"C:\Users\Dell\Desktop\anjori\veinsecure-palm-vein-authentication\results\models\final_model.h5")
 class_names = [f"{i:03d}" for i in range(1, 42)]  # '001' to '041'
 
-# 🔧 Setup Flask app
+# 🔧 Flask App Config
 app = Flask(__name__)
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 🪵 Set up logging
+# 🪵 Logging Setup
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename="logs/api.log", level=logging.INFO)
 
+# 🔹 Route: Home Page with Upload Form
 @app.route('/')
-def home():
-    return "✅ Flask App Running! (UI coming soon)"
+def index():
+    return render_template("index.html")  # Ensure templates/index.html exists
 
+# 🔹 Route: Prediction Logic
 @app.route("/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
@@ -52,6 +54,8 @@ def predict():
         logging.error(f"Prediction failed: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# 🔧 Run Server
 if __name__ == '__main__':
     app.run(debug=True)
+
 
