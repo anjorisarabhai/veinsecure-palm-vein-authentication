@@ -31,6 +31,8 @@ print(os.listdir('/content/veinsecure-palm-vein-authentication/utils'))
 
 !head -n 165 /content/veinsecure-palm-vein-authentication/utils/helpers.py
 
+"""## **Flask API Setup**"""
+
 import importlib
 import utils.helpers
 importlib.reload(utils.helpers)
@@ -47,10 +49,172 @@ model = load_model("veinsecure-palm-vein-authentication/results/models/final_mod
 UPLOAD_FOLDER = "static/uploads/"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+"""@app.route('/')
+def home():
+    return "✅ Flask App Running! (UI coming soon)" """
+
+""" if __name__ == '__main__':
+    app.run(debug=True) """
+# do not run this cell as of now. if u do then press ctrl+c to quit. flask application won't run through google colab. run it locally using applocal.py
+
+"""### **Build POST route**
+
+"""
+
+# app.py
+
+from flask import Flask, request, jsonify
+import os
+from tensorflow.keras.models import load_model
+from utils.helperslocal import predict_image  # ✅ LOCAL PREDICT FUNCTION
+import logging
+
+# Load model and class names
+#MODEL_PATH = "final_model.h5"
+UPLOAD_FOLDER = "static/uploads"
+
+app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+#model = load_model(MODEL_PATH)
+model = load_model("veinsecure-palm-vein-authentication/results/models/final_model.h5")
+class_names = [f"{i:03d}" for i in range(1, 42)]  # '001' to '041'
+
+
+# Setup logging
+logging.basicConfig(filename="logs/api.log", level=logging.INFO)
+"""
+@app.route("/")
+def home():
+    return "✅ Palm Vein Auth API is running." """
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+    file.save(file_path)
+
+    try:
+        class_id, class_name, confidence = predict_image(file_path, model, class_names)
+        logging.info(f"Predicted: {class_name} (Confidence: {confidence:.2f})")
+
+        return jsonify({
+            "predicted_class": class_name,
+            "confidence": round(confidence, 2),
+            "class_id": int(class_id)
+        })
+
+    except Exception as e:
+        logging.error(f"Prediction failed: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+"""
+if __name__ == "__main__":
+    app.run(debug=True) """
+
+"""## **Frontend Integration**
+
+### **Create templates/index.html**
+"""
+
+# Create templates directory if not exists
+import os
+os.makedirs("/content/veinsecure-palm-vein-authentication/templates", exist_ok=True)
+
+# Write HTML code
+html_code = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Palm Vein Authenticator</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container text-center mt-5">
+        <h2 class="mb-4">Palm Vein Authenticator</h2>
+        <form action="/predict" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input class="form-control" type="file" name="file" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Predict</button>
+        </form>
+    </div>
+</body>
+</html>
+'''
+
+with open("/content/veinsecure-palm-vein-authentication/templates/index.html", "w") as f:
+    f.write(html_code)
+
+print("✅ HTML form saved to templates/index.html")
+
+from flask import Flask, request, render_template
+
 @app.route('/')
 def home():
-    return "✅ Flask App Running! (UI coming soon)"
+    return render_template("index.html")
 
 if __name__ == '__main__':
     app.run(debug=True)
 
+"""### **Modify templates/index.html to show results**"""
+
+# Create templates directory
+import os
+os.makedirs("/content/veinsecure-palm-vein-authentication/templates", exist_ok=True)
+
+
+html_code = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Palm Vein Authenticator</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container text-center mt-5">
+        <h2 class="mb-4">Palm Vein Authenticator</h2>
+
+        <!-- Upload Form -->
+        <form action="/predict" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input class="form-control" type="file" name="file" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Predict</button>
+        </form>
+
+        <!-- Result Section -->
+        {% if prediction %}
+        <div class="alert alert-success mt-4">
+            <h4>Predicted Class: {{ prediction }}</h4>
+            <p>Confidence: {{ confidence }}%</p>
+            <img src="{{ url_for('static', filename='uploads/' + filename) }}"
+                 alt="Uploaded Image"
+                 class="img-fluid mt-3"
+                 style="max-height: 300px;">
+        </div>
+        {% elif error %}
+        <div class="alert alert-danger mt-4">
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
+# Save to templates directory
+with open("/content/veinsecure-palm-vein-authentication/templates/index.html", "w") as f:
+    f.write(html_code)
+
+print("✅ HTML updated with prediction placeholders.")
+
+from google.colab import files
+files.download("/content/veinsecure-palm-vein-authentication/templates/index.html")
