@@ -1,38 +1,984 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Palm Vein Authenticator</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeinSecure - Palm Vein Authentication</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Inlined Custom CSS from style.css -->
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --info-color: #17a2b8;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --gradient-danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
+            --shadow-heavy: 0 8px 30px rgba(0,0,0,0.2);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ===== Global Styles ===== */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Updated background to shades of lavender */
+            background: linear-gradient(135deg, #e6e6fa, #d8bfd8); /* Lavender to Thistle */
+            min-height: 100vh;
+            line-height: 1.6;
+            color: var(--dark-color); /* Default text color */
+        }
+
+        /* ===== Navigation ===== */
+        .navbar {
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: var(--primary-color) !important; /* Ensure primary color background */
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+        }
+
+        .navbar-text {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* ===== Authentication Icon ===== */
+        .auth-icon {
+            font-size: 4rem;
+            color: var(--secondary-color);
+            text-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* ===== Cards ===== */
+        .auth-card, .result-card {
+            border: none;
+            border-radius: var(--border-radius);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: var(--shadow-medium);
+            transition: var(--transition);
+        }
+
+        .auth-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        /* ===== Form Elements ===== */
+        .form-label {
+            color: var(--dark-color);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .form-select, .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-select:focus, .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            background: white;
+        }
+
+        /* ===== Upload Area ===== */
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: var(--border-radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.8);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background: rgba(52, 152, 219, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--success-color);
+            background: rgba(39, 174, 96, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-content {
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .upload-area h4 {
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* ===== File Preview ===== */
+        .file-preview {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .preview-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 1rem;
+            box-shadow: var(--shadow-light);
+        }
+
+        .file-info {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* ===== Authentication Button ===== */
+        .auth-btn {
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 8px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .auth-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* ===== Result Section ===== */
+        .result-header {
+            position: relative;
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+            box-shadow: var(--shadow-medium);
+            animation: resultPop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .result-icon.success {
+            background: var(--gradient-success);
+        }
+
+        .result-icon.denied {
+            background: var(--gradient-danger);
+        }
+
+        .result-icon.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        @keyframes resultPop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ===== Verification Details ===== */
+        .verification-details {
+            animation: slideUp 0.6s ease-out 0.3s both;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .detail-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            transition: var(--transition);
+        }
+
+        .detail-card:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-light);
+        }
+
+        .detail-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        /* Removed Confidence Meter styles */
+
+        /* ===== Result Image ===== */
+        .result-image {
+            max-height: 300px;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .result-image:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .uploaded-image {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+
+        /* ===== Alerts ===== */
+        .alert {
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-light);
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%);
+            color: var(--danger-color);
+            border-left: 4px solid var(--danger-color);
+        }
+
+        /* ===== Badges ===== */
+        .badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        /* ===== Loading States ===== */
+        .loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading .upload-area {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: var(--secondary-color);
+        }
+
+        .loading .upload-area::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        /* ===== Responsive Design ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .auth-card, .result-card {
+                margin: 0 0.5rem;
+            }
+
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+
+            .upload-icon {
+                font-size: 2rem;
+            }
+
+            .auth-icon {
+                font-size: 3rem;
+            }
+
+            .result-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .detail-card {
+                margin-bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .navbar-brand {
+                font-size: 1.25rem;
+            }
+
+            .auth-btn {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
+
+            .result-image {
+                max-height: 200px;
+            }
+        }
+
+        /* ===== Accessibility ===== */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ===== Focus States ===== */
+        .btn:focus,
+        .form-control:focus,
+        .form-select:focus {
+            outline: 2px solid var(--secondary-color);
+            outline-offset: 2px;
+        }
+
+        /* ===== Print Styles ===== */
+        @media print {
+            .navbar,
+            footer,
+            .btn {
+                display: none !important;
+            }
+
+            .container {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            .card {
+                box-shadow: none !important;
+                border: 1px solid #dee2e6 !important;
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container text-center mt-5">
-        <h2 class="mb-4">Palm Vein Authenticator</h2>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-hand-paper me-2"></i>
+                <span class="fw-bold">VeinSecure</span>
+            </a>
+            <span class="navbar-text">
+                <i class="fas fa-shield-alt me-1"></i>
+                Palm Vein Authentication System
+            </span>
+        </div>
+    </nav>
 
-        <!-- Upload Form -->
-        <form action="/predict" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <input class="form-control" type="file" name="file" required>
+    <!-- Main Content -->
+    <div class="container mt-5 mb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-6">
+
+                <!-- Header Section -->
+                <div class="text-center mb-5">
+                    <div class="auth-icon mb-3">
+                        <i class="fas fa-fingerprint"></i>
+                    </div>
+                    <h1 class="h2 fw-bold text-primary mb-2">Palm Vein Authentication</h1>
+                    <p class="text-muted">Secure access through palm vein/print verification</p> <!-- Changed text -->
+                </div>
+
+                <!-- Alert Placeholder -->
+                <div id="alertContainer"></div>
+
+                <!-- Authentication Form -->
+                <div class="card auth-card shadow-lg">
+                    <div class="card-body p-4">
+                        <form id="authForm">
+
+                            <!-- Identity Selection -->
+                            <div class="mb-4">
+                                <label for="claimed_identity" class="form-label fw-semibold">
+                                    <i class="fas fa-user me-2"></i>Select Your Identity
+                                </label>
+                                <select class="form-select form-select-lg" id="claimed_identity" name="claimed_identity" required>
+                                    <option value="">Choose your user ID...</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+
+                            <!-- File Upload Section -->
+                            <div class="mb-4">
+                                <label for="file" class="form-label fw-semibold">
+                                    <i class="fas fa-upload me-2"></i>Upload Palm Vein Scan
+                                </label>
+                                <div class="upload-area" id="uploadArea">
+                                    <div class="upload-content">
+                                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                        <h4>Drag & Drop Your Image</h4>
+                                        <p class="text-muted">or click to browse files</p>
+                                        <small class="text-muted">
+                                            Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF (Max: 16MB)
+                                        </small>
+                                    </div>
+                                    <input type="file" class="form-control" id="file" name="file" accept="image/*" required hidden>
+                                </div>
+                                <div id="filePreview" class="file-preview mt-3" style="display: none;">
+                                    <img id="previewImage" src="" alt="Preview" class="preview-image">
+                                    <div class="file-info">
+                                        <span id="fileName"></span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="removeFile">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg auth-btn" id="submitBtn">
+                                    <span class="btn-text">
+                                        <i class="fas fa-lock me-2"></i>Authenticate
+                                    </span>
+                                    <span class="btn-loading" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Verifying...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Results Section (Initially hidden) -->
+                <div id="resultCard" class="card result-card mt-4 shadow-lg p-4" style="display: none;">
+                    <div class="text-center result-header">
+                        <div id="resultIcon" class="result-icon success mb-3">
+                            <!-- Icon will change based on result -->
+                        </div>
+                        <h3 id="resultTitle" class="fw-bold mb-3"></h3>
+                    </div>
+
+                    <div id="verificationDetails" class="verification-details row gx-3 gy-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="detail-card">
+                                <p class="detail-label">Claimed Identity</p>
+                                <p id="claimedIdentityResult" class="detail-value text-primary"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-card">
+                                <p class="detail-label">Predicted Identity</p>
+                                <p id="predictedIdentityResult" class="detail-value text-secondary"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="uploaded-image text-center">
+                        <p class="detail-label mb-2">Uploaded Image</p>
+                        <img id="resultImagePreview" src="" alt="Uploaded Palm Vein" class="img-fluid result-image">
+                    </div>
+                </div>
             </div>
-            <button class="btn btn-primary" type="submit">Predict</button>
-        </form>
-
-        <!-- Result Section -->
-        {% if prediction %}
-        <div class="alert alert-success mt-4">
-            <h4>Predicted Class: {{ prediction }}</h4>
-            <p>Confidence: {{ confidence }}%</p>
-            <img src="{{ url_for('static', filename='uploads/' + filename) }}"
-                 alt="Uploaded Image"
-                 class="img-fluid mt-3"
-                 style="max-height: 300px;">
         </div>
-        {% elif error %}
-        <div class="alert alert-danger mt-4">
-            <p>{{ error }}</p>
-        </div>
-        {% endif %}
     </div>
+
+    <!-- Footer -->
+    <footer class="footer bg-light py-4 text-center mt-auto">
+        <div class="container">
+            <span class="text-muted">© 2025 VeinSecure. All rights reserved.</span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle (Popper included) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Inlined Custom JavaScript -->
+    <script>
+        // ===== Global Variables and Constants =====
+        const classNames = Array.from({ length: 41 }, (_, i) => String(i + 1).padStart(3, '0')); // Generates '001', '002', ..., '041'
+        const ALLOWED_EXTENSIONS = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/tiff'];
+        const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+
+        // ===== DOM Content Loaded Event =====
+        document.addEventListener('DOMContentLoaded', function() {
+            populateUserDropdown();
+            initializeUploadArea();
+            initializeForm();
+            initializeAnimations(); // Initial call to ensure proper styling and states are set up
+            checkFormValidity(); // Ensure button state is correct on load
+        });
+
+        // ===== Populate User Dropdown =====
+        function populateUserDropdown() {
+            const userIdSelect = document.getElementById('claimed_identity');
+            classNames.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = `User ${className}`;
+                userIdSelect.appendChild(option);
+            });
+        }
+
+        // ===== Upload Area Functionality =====
+        function initializeUploadArea() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('file');
+            const filePreview = document.getElementById('filePreview');
+            const previewImage = document.getElementById('previewImage');
+            const fileNameSpan = document.getElementById('fileName');
+            const removeFileBtn = document.getElementById('removeFile');
+
+            // Click to browse files
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files; // Assign files to input
+                    handleFileSelection(files[0]);
+                }
+            });
+
+            // File input change event
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+
+            // Remove file functionality
+            removeFileBtn.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent form submission if button inside form
+                clearFileSelection();
+                checkFormValidity();
+            });
+
+            // Handle file selection
+            function handleFileSelection(file) {
+                hideAlerts();
+                hideResultSection();
+
+                if (!ALLOWED_EXTENSIONS.includes(file.type)) {
+                    showAlert('Invalid file type. Please select a PNG, JPG, JPEG, GIF, BMP, or TIFF image.', 'danger');
+                    clearFileSelection();
+                    return;
+                }
+
+                if (file.size > MAX_FILE_SIZE) {
+                    showAlert(`File too large. Please select an image smaller than ${MAX_FILE_SIZE / (1024 * 1024)}MB.`, 'danger');
+                    clearFileSelection();
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    fileNameSpan.textContent = file.name;
+                    filePreview.style.display = 'flex';
+                    uploadArea.style.display = 'none';
+                    checkFormValidity();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Clear file selection
+            function clearFileSelection() {
+                fileInput.value = '';
+                filePreview.style.display = 'none';
+                uploadArea.style.display = 'block';
+                previewImage.src = '';
+                fileNameSpan.textContent = '';
+                checkFormValidity();
+            }
+
+            // Listen for changes in dropdown to re-check form validity
+            document.getElementById('claimed_identity').addEventListener('change', checkFormValidity);
+        }
+
+        // Check form validity and enable/disable submit button
+        function checkFormValidity() {
+            const claimedIdentity = document.getElementById('claimed_identity').value;
+            const fileInput = document.getElementById('file');
+            const fileSelected = fileInput.files.length > 0;
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (claimedIdentity && fileSelected) {
+                submitBtn.removeAttribute('disabled');
+            } else {
+                submitBtn.setAttribute('disabled', 'true');
+            }
+        }
+
+
+        // ===== Form Functionality (Direct Backend Connection) =====
+        function initializeForm() {
+            const form = document.getElementById('authForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoading = submitBtn.querySelector('.btn-loading');
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                hideAlerts();
+                hideResultSection();
+
+                const claimedIdentity = document.getElementById('claimed_identity').value;
+                const fileInput = document.getElementById('file');
+                const uploadedFile = fileInput.files[0];
+
+                if (!claimedIdentity) {
+                    showAlert('Please select your identity before proceeding.', 'danger');
+                    return;
+                }
+                if (!uploadedFile) {
+                    showAlert('Please upload a palm vein scan before proceeding.', 'danger');
+                    return;
+                }
+
+                showLoadingState();
+
+                // --- Direct Backend Call ---
+                const formData = new FormData();
+                formData.append('claimed_identity', claimedIdentity);
+                formData.append('file', uploadedFile);
+
+                try {
+                    const response = await fetch('/authenticate', { // This will call your Flask backend
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) { // Check for HTTP errors
+                        const errorData = await response.json().catch(() => ({})); // Try to parse JSON error, or default to empty object
+                        throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json(); // Assuming your Flask app returns JSON
+                    displayResults(result);
+                } catch (error) {
+                    console.error('Authentication Error:', error);
+                    showAlert(`Authentication failed: ${error.message || 'Network error or server issue.'}`, 'danger');
+                } finally {
+                    hideLoadingState();
+                }
+            });
+
+            function showLoadingState() {
+                submitBtn.disabled = true;
+                btnText.style.display = 'none';
+                btnLoading.style.display = 'inline';
+                document.body.classList.add('loading');
+            }
+
+            function hideLoadingState() {
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                document.body.classList.remove('loading');
+            }
+        }
+
+        // ===== Result Display Function =====
+        function displayResults(result) {
+            const resultCard = document.getElementById('resultCard');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const claimedIdentityResult = document.getElementById('claimedIdentityResult');
+            const predictedIdentityResult = document.getElementById('predictedIdentityResult');
+            const resultImagePreview = document.getElementById('resultImagePreview');
+            const fileInput = document.getElementById('file');
+            const uploadedFile = fileInput.files[0];
+
+            resultIcon.className = 'result-icon mb-3';
+
+            if (result.error) {
+                showAlert(result.error, 'danger');
+                resultTitle.textContent = "Authentication Error";
+                resultIcon.classList.add('error');
+                resultIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+            } else if (result.access_granted) {
+                showAlert('Access Granted! Identity verified successfully. ✅', 'success');
+                resultTitle.textContent = "Access Granted";
+                resultIcon.classList.add('success');
+                resultIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+            } else {
+                showAlert('Access Denied! Identity verification failed. ❌', 'danger');
+                resultTitle.textContent = "Access Denied";
+                resultIcon.classList.add('denied');
+                resultIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
+            }
+
+            claimedIdentityResult.textContent = `User ${result.claimed_identity}`;
+            predictedIdentityResult.textContent = `User ${result.prediction || 'N/A'}`; // Handle case where prediction might be null on error
+
+            if (uploadedFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resultImagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(uploadedFile);
+            } else {
+                resultImagePreview.src = 'https://placehold.co/300x200/cccccc/333333?text=No+Image';
+            }
+
+            resultCard.style.display = 'block';
+            initializeAnimations();
+        }
+
+        function hideResultSection() {
+            const resultCard = document.getElementById('resultCard');
+            resultCard.style.display = 'none';
+        }
+
+        // ===== Alert System =====
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <i class="fas fa-${getAlertIcon(type)} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        function hideAlerts() {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+        }
+
+        function getAlertIcon(type) {
+            const icons = {
+                'success': 'check-circle',
+                'danger': 'exclamation-triangle',
+                'warning': 'exclamation-circle',
+                'info': 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+
+        // ===== Animation Utilities =====
+        function initializeAnimations() {
+            const resultCard = document.getElementById('resultCard');
+            if (resultCard) {
+                resultCard.style.opacity = '0';
+                resultCard.style.transform = 'translateY(20px)';
+
+                setTimeout(() => {
+                    resultCard.style.transition = 'all 0.6s ease-out';
+                    resultCard.style.opacity = '1';
+                    resultCard.style.transform = 'translateY(0)';
+                }, 100);
+            }
+        }
+
+        // ===== Utility Functions (kept for completeness but not all used) =====
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ===== Error Handling (General JS Errors) =====
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.error);
+            showAlert('An unexpected error occurred. Please refresh the page and try again.', 'danger');
+        });
+
+        // ===== Accessibility Enhancements =====
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const alerts = document.querySelectorAll('.alert .btn-close');
+                alerts.forEach(closeBtn => closeBtn.click());
+            }
+
+            if (e.key === 'Enter' && e.target.id === 'uploadArea') {
+                e.preventDefault();
+                document.getElementById('file').click();
+            }
+        });
+
+        // ===== Performance Monitoring =====
+        if ('performance' in window) {
+            window.addEventListener('load', function() {
+                setTimeout(() => {
+                    const perfData = performance.getEntriesByType('navigation')[0];
+                    console.log('Page Load Time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
+                }, 0);
+            });
+        }
+
+        // ===== Service Worker Registration (if available - placeholder) =====
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                console.log('Service Worker support detected');
+            });
+        }
+    </script>
 </body>
 </html>
