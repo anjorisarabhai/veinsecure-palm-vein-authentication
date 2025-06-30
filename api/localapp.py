@@ -1,166 +1,116 @@
-from flask import Flask, request, render_template, jsonify # Added jsonify
+from flask import Flask, request, render_template, jsonify
 from tensorflow.keras.models import load_model
 import os
 import sys
-import logging
-from datetime import datetime # Added for logging timestamps
+from datetime import datetime
 
-# ✅ Fix import path for local helpers
-# Ensure this path correctly points to your 'utils' directory if it's not directly in 'api'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.helperslocal import predict_image
+# Get current script's base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 🔹 Load model & class names
-try:
-    # Ensure this path is correct for your local setup
-    model = load_model(r"C:\Users\Dell\Desktop\anjori\veinsecure-palm-vein-authentication\results\models\final_model.h5")
-    class_names = [f"{i:03d}" for i in range(1, 42)]  # '001' to '041'
-    logging.info("Model loaded successfully")
-except Exception as e:
-    logging.error(f"Failed to load model: {e}")
-    model = None
-    class_names = [f"{i:03d}" for i in range(1, 42)] # Fallback class names
-    # You might want to exit or handle this more gracefully in production
+# Set paths
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+LOGS_FOLDER = os.path.join(BASE_DIR, "logs")
+MODEL_PATH = os.path.join(BASE_DIR, "..", "results", "models", "final_model.h5")
+HELPER_PATH = os.path.abspath(os.path.join(BASE_DIR, '..'))
 
-# 🔧 App Config
-app = Flask(__name__)
-# For simplicity, remove secret_key if not using Flask sessions/flash messages that require it
-# app.secret_key = os.environ.get("SESSION_SECRET", "fallback-secret-key-for-development")
+# Add helper path
+sys.path.append(HELPER_PATH)
+from utils.helperslocal import predict_image  # Local version of predict_image
 
-UPLOAD_FOLDER = "static/uploads"
-TEMPLATES_FOLDER = "templates" # Not strictly needed if not rendering Flask templates from backend for API calls
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'} # Define allowed extensions
+# Allowed extensions
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif'}
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
-
+# Create necessary directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs("logs", exist_ok=True)
+os.makedirs(LOGS_FOLDER, exist_ok=True)
 
-# 🪵 Logging (Enhanced to match frontend's error logging)
-logging.basicConfig(
-    level=logging.DEBUG, # Set to DEBUG to capture more info
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/api.log'),
-        logging.StreamHandler() # Also log to console
-    ]
-)
+# Initialize Flask app
+app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
 
-def allowed_file(filename):
-    """Check if file extension is allowed"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# Load model and class names
+try:
+    model = load_model(MODEL_PATH)
+    class_names = [f"{i:03d}" for i in range(1, 42)]
+except Exception as e:
+    print(f"Failed to load model: {e}")
+    model = None
+    class_names = [f"{i:03d}" for i in range(1, 42)]
 
-def log_authentication_attempt(claimed_id, predicted_id, match_status, filename, error_msg=None):
-    """Log authentication attempt with all relevant details"""
+# 🔸 Simple log function (write directly to .log file)
+def log_auth_attempt(claimed_id, predicted_id, status):
+    log_file_path = os.path.join(LOGS_FOLDER, "login_attempts.log")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"{timestamp} | Claimed: {claimed_id} | Predicted: {predicted_id} | Status: {match_status} | File: {filename}"
-    if error_msg:
-        log_entry += f" | Error: {error_msg}"
-    logging.info(f"AUTH_ATTEMPT: {log_entry}")
+    with open(log_file_path, "a") as f:
+        f.write(f"[{timestamp}] Claimed: {claimed_id}, Predicted: {predicted_id}, Access: {status}\n")
 
+# Utility
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# 🔹 Route: Home Page (initial render)
+# Home route
 @app.route('/')
 def index():
-    # In a real setup, this would serve your index.html from the templates folder
-    # For now, it's less critical as index.html is self-contained.
     return render_template("index.html")
 
-# 🔹 Route: Authentication (Changed from /predict to /authenticate)
-@app.route("/authenticate", methods=["POST"])
+# Authenticate route
+@app.route('/authenticate', methods=["POST"])
 def authenticate():
-    response_data = {
-        'prediction': None,
-        'filename': None,
-        'error': None,
-        'claimed_identity': None,
-        'access_granted': False,
-        'match_status': None
+    response = {
+        "prediction": None,
+        "confidence": None,
+        "filename": None,
+        "error": None,
+        "access_granted": False
     }
 
-    # Check if model is loaded
     if model is None:
-        response_data['error'] = "Authentication system not available. Please contact administrator."
-        log_authentication_attempt("N/A", "N/A", "ERROR", "N/A", response_data['error'])
-        return jsonify(response_data), 500 # Internal Server Error
+        response["error"] = "Model not loaded."
+        return jsonify(response), 500
 
-    # Get claimed identity
-    claimed_identity = request.form.get('claimed_identity')
+    claimed_identity = request.form.get("claimed_identity")
     if not claimed_identity:
-        response_data['error'] = "Please select your identity before uploading palm vein scan."
-        log_authentication_attempt("N/A", "N/A", "ERROR", "N/A", response_data['error'])
-        return jsonify(response_data), 400 # Bad Request
+        response["error"] = "No identity selected."
+        return jsonify(response), 400
 
-    response_data['claimed_identity'] = claimed_identity
-
-    # Check file upload
     if "file" not in request.files:
-        response_data['error'] = "No file uploaded. Please select a palm vein image."
-        log_authentication_attempt(claimed_identity, "N/A", "ERROR", "N/A", response_data['error'])
-        return jsonify(response_data), 400 # Bad Request
+        response["error"] = "No file uploaded."
+        return jsonify(response), 400
 
     file = request.files["file"]
     if file.filename == "":
-        response_data['error'] = "No file selected. Please choose a palm vein image."
-        log_authentication_attempt(claimed_identity, "N/A", "ERROR", "N/A", response_data['error'])
-        return jsonify(response_data), 400 # Bad Request
+        response["error"] = "No file selected."
+        return jsonify(response), 400
 
     if not allowed_file(file.filename):
-        response_data['error'] = f"Invalid file type. Please upload one of: {', '.join(ALLOWED_EXTENSIONS)}"
-        log_authentication_attempt(claimed_identity, "N/A", "ERROR", file.filename, response_data['error'])
-        return jsonify(response_data), 415 # Unsupported Media Type
+        response["error"] = "Unsupported file type."
+        return jsonify(response), 415
 
-    # Save uploaded file
-    filename = file.filename # Using original filename for simplicity
+    filename = file.filename
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    file.save(file_path)
+    response["filename"] = filename
 
-    try:
-        file.save(file_path)
-        response_data['filename'] = filename
-    except Exception as e:
-        response_data['error'] = f"Failed to save uploaded file: {str(e)}"
-        logging.error(f"File save error: {response_data['error']}")
-        log_authentication_attempt(claimed_identity, "N/A", "ERROR", filename, response_data['error'])
-        return jsonify(response_data), 500 # Internal Server Error
-
-    # Perform prediction
     try:
         class_id, class_name, confidence = predict_image(file_path, model, class_names)
-        response_data['prediction'] = class_name
-        # Removed confidence from response_data based on your previous request
+        response["prediction"] = class_name
+        response["confidence"] = round(confidence * 100, 2)
 
-        # Verify identity (claimed vs predicted)
         if claimed_identity == class_name:
-            response_data['access_granted'] = True
-            response_data['match_status'] = "MATCH"
+            response["access_granted"] = True
+            log_auth_attempt(claimed_identity, class_name, "GRANTED")
         else:
-            response_data['access_granted'] = False
-            response_data['match_status'] = "MISMATCH"
-
-        # Log authentication attempt
-        log_authentication_attempt(
-            claimed_identity,
-            class_name,
-            response_data['match_status'],
-            filename
-        )
+            response["access_granted"] = False
+            log_auth_attempt(claimed_identity, class_name, "DENIED")
 
     except Exception as e:
-        response_data['error'] = f"Authentication failed during prediction: {str(e)}"
-        logging.error(f"Prediction error: {response_data['error']}")
-        log_authentication_attempt(
-            claimed_identity,
-            "ERROR",
-            "ERROR",
-            filename,
-            response_data['error']
-        )
+        response["error"] = f"Prediction failed: {str(e)}"
+        log_auth_attempt(claimed_identity, "ERROR", "FAILED")
+        return jsonify(response), 500
 
-    # Return JSON response
-    return jsonify(response_data), 200 # OK
+    return jsonify(response), 200
 
-# 🔧 Run locally
-if __name__ == '__main__':
-    app.run(debug=True) # Ensure host is 0.0.0.0 for broader access
+# Run app
+if __name__ == "__main__":
+    app.run(debug=True)
