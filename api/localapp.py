@@ -73,11 +73,12 @@ def authenticate():
     if not claimed_identity:
         response["error"] = "No identity selected."
         return jsonify(response), 400
+    response["claimed_identity"] = claimed_identity
 
     if "file" not in request.files:
         response["error"] = "No file uploaded."
         return jsonify(response), 400
-
+    
     file = request.files["file"]
     if file.filename == "":
         response["error"] = "No file selected."
