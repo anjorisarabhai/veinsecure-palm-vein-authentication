@@ -509,7 +509,7 @@
                         <i class="fas fa-fingerprint"></i>
                     </div>
                     <h1 class="h2 fw-bold text-primary mb-2">Palm Vein Authentication</h1>
-                    <p class="text-muted">Secure access through palm vein/print verification</p> <!-- Changed text -->
+                    <p class="text-muted">Secure access through palm vein/print verification</p>
                 </div>
 
                 <!-- Alert Placeholder -->
@@ -789,8 +789,17 @@
                         body: formData
                     });
 
-                    if (!response.ok) { // Check for HTTP errors
-                        const errorData = await response.json().catch(() => ({})); // Try to parse JSON error, or default to empty object
+                    // --- Handle Rate Limiting (429 status) ---
+                    if (response.status === 429) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errorMessage = errorData.error || "Too many requests. Please try again later.";
+                        showAlert(errorMessage, 'danger');
+                        hideLoadingState(); // Hide loading state even on 429
+                        return; // Stop further processing
+                    }
+
+                    if (!response.ok) { // Check for other HTTP errors
+                        const errorData = await response.json().catch(() => ({}));
                         throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
                     }
 
