@@ -1,60 +1,59 @@
 from flask import Flask, request, render_template, jsonify
 from tensorflow.keras.models import load_model
+from datetime import datetime, timedelta
+from collections import defaultdict
 import os
 import sys
-from datetime import datetime
 
-# Get current script's base directory
+# ----- Paths -----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Set paths
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 LOGS_FOLDER = os.path.join(BASE_DIR, "logs")
 MODEL_PATH = os.path.join(BASE_DIR, "..", "results", "models", "final_model.h5")
 HELPER_PATH = os.path.abspath(os.path.join(BASE_DIR, '..'))
-
-# Add helper path
 sys.path.append(HELPER_PATH)
-from utils.helperslocal import predict_image  # Local version of predict_image
 
-# Allowed extensions
+from utils.helperslocal import predict_image  # Local predictor
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif'}
-
-# Create necessary directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 
-# Initialize Flask app
+# ----- Flask App -----
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
 
-# Load model and class names
+# ----- Load Model -----
 try:
     model = load_model(MODEL_PATH)
     class_names = [f"{i:03d}" for i in range(1, 42)]
 except Exception as e:
-    print(f"Failed to load model: {e}")
+    print(f"Model load failed: {e}")
     model = None
     class_names = [f"{i:03d}" for i in range(1, 42)]
 
-# 🔸 Simple log function (write directly to .log file)
+# ----- Logging -----
 def log_auth_attempt(claimed_id, predicted_id, status):
-    log_file_path = os.path.join(LOGS_FOLDER, "login_attempts.log")
+    log_file = os.path.join(LOGS_FOLDER, "login_attempts.log")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(log_file_path, "a") as f:
+    with open(log_file, "a") as f:
         f.write(f"[{timestamp}] Claimed: {claimed_id}, Predicted: {predicted_id}, Access: {status}\n")
 
-# Utility
+# ----- Rate Limiting (Lockout) -----
+failed_attempts = defaultdict(lambda: {"count": 0, "last_failed_time": None})
+LOCKOUT_THRESHOLD = 5
+LOCKOUT_TIME = timedelta(seconds=60)
+
+# ----- Helpers -----
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Home route
+# ----- Routes -----
 @app.route('/')
 def index():
     return render_template("index.html")
 
-# Authenticate route
 @app.route('/authenticate', methods=["POST"])
 def authenticate():
     response = {
@@ -75,10 +74,19 @@ def authenticate():
         return jsonify(response), 400
     response["claimed_identity"] = claimed_identity
 
+    # 🔒 Rate-limiting check
+    user_state = failed_attempts[claimed_identity]
+    if user_state["count"] >= LOCKOUT_THRESHOLD:
+        time_diff = datetime.now() - user_state["last_failed_time"]
+        if time_diff < LOCKOUT_TIME:
+            wait_time = int((LOCKOUT_TIME - time_diff).total_seconds())
+            response["error"] = f"Too many failed attempts. Try again in {wait_time} seconds."
+            return jsonify(response), 429  # Too Many Requests
+
     if "file" not in request.files:
         response["error"] = "No file uploaded."
         return jsonify(response), 400
-    
+
     file = request.files["file"]
     if file.filename == "":
         response["error"] = "No file selected."
@@ -100,9 +108,12 @@ def authenticate():
 
         if claimed_identity == class_name:
             response["access_granted"] = True
+            failed_attempts[claimed_identity] = {"count": 0, "last_failed_time": None}
             log_auth_attempt(claimed_identity, class_name, "GRANTED")
         else:
             response["access_granted"] = False
+            failed_attempts[claimed_identity]["count"] += 1
+            failed_attempts[claimed_identity]["last_failed_time"] = datetime.now()
             log_auth_attempt(claimed_identity, class_name, "DENIED")
 
     except Exception as e:
@@ -112,6 +123,6 @@ def authenticate():
 
     return jsonify(response), 200
 
-# Run app
+# ----- Run App -----
 if __name__ == "__main__":
     app.run(debug=True)
