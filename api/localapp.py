@@ -13,7 +13,7 @@ MODEL_PATH = os.path.join(BASE_DIR, "..", "results", "models", "final_model.h5")
 HELPER_PATH = os.path.abspath(os.path.join(BASE_DIR, '..'))
 sys.path.append(HELPER_PATH)
 
-from utils.helperslocal import predict_image  # Local predictor
+from utils.helperslocal import predict_image
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -34,11 +34,14 @@ except Exception as e:
     class_names = [f"{i:03d}" for i in range(1, 42)]
 
 # ----- Logging -----
-def log_auth_attempt(claimed_id, predicted_id, status):
+def log_auth_attempt(claimed_id, predicted_id, status, note=None):
     log_file = os.path.join(LOGS_FOLDER, "login_attempts.log")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    entry = f"[{timestamp}] Claimed: {claimed_id}, Predicted: {predicted_id}, Access: {status}"
+    if note:
+        entry += f" | Note: {note}"
     with open(log_file, "a") as f:
-        f.write(f"[{timestamp}] Claimed: {claimed_id}, Predicted: {predicted_id}, Access: {status}\n")
+        f.write(entry + "\n")
 
 # ----- Rate Limiting (Lockout) -----
 failed_attempts = defaultdict(lambda: {"count": 0, "last_failed_time": None})
@@ -81,6 +84,7 @@ def authenticate():
         if time_diff < LOCKOUT_TIME:
             wait_time = int((LOCKOUT_TIME - time_diff).total_seconds())
             response["error"] = f"Too many failed attempts. Try again in {wait_time} seconds."
+            log_auth_attempt(claimed_identity, "N/A", "LOCKED", f"Retry allowed in {wait_time} sec")
             return jsonify(response), 429  # Too Many Requests
 
     if "file" not in request.files:
