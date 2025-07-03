@@ -84,7 +84,7 @@ def authenticate():
         if time_diff < LOCKOUT_TIME:
             wait_time = int((LOCKOUT_TIME - time_diff).total_seconds())
             response["error"] = f"Too many failed attempts. Try again in {wait_time} seconds."
-            log_auth_attempt(claimed_identity, "N/A", "LOCKED", f"Retry allowed in {wait_time} sec")
+            log_auth_attempt(claimed_identity, "N/A", "LOCKED", f"Anomaly detected, retry allowed in {wait_time} sec")
             return jsonify(response), 429  # Too Many Requests
 
     if "file" not in request.files:
